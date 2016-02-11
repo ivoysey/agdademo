@@ -95,3 +95,17 @@ three things to note here:
     program and the types defined so far, so emacs and agda will
     collaborate to generate exhaustive cases for you when you press `C-c
     C-c` in a hole.
+
+
+```
+  data List0 (A : Set) : Set where
+    [] : List0 A
+    ::0 : A → List0 A → List0 A
+```
+
+
+```agda
+  data List0 (A : Set) : Set where
+    [] : List0 A
+    ::0 : A → List0 A → List0 A
+```
