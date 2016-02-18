@@ -127,13 +127,14 @@ module foldrl-simpler where
   ++assoc : {A : Set} → (a b c : List A) → ((a ++ b) ++ c) == (a ++ (b ++ c))
   ++assoc [] b c = refl
   ++assoc (a :: as) b c with ++assoc as b c
-  ... | ih = ((a :: as) ++ b) ++ c   =< refl >
-              (a :: (as ++ b)) ++ c  =< ap (λ x → a :: x) ih >
-               a :: (as ++ (b ++ c)) =< refl >
-              (a :: as) ++ (b ++ c)  ■
+  ... | ih = ((a :: as) ++ b) ++ c    =< refl >
+              (a :: (as ++ b)) ++ c   =< ap (λ x → a :: x) ih >
+               a :: (as ++ (b ++ c))  =< refl >
+              (a :: as) ++ (b ++ c)   ■
 
-
-
+  -- that ih thing is just a habit of mine; if i'm recurring on something
+  -- structurally i use it to remind myself of what the right thing to
+  -- assume is. totally not part of the language.
 
   -- this is the higher order function that encapsulates structural
   -- recursion on lists
@@ -147,28 +148,51 @@ module foldrl-simpler where
   foldl f b [] = b
   foldl f b (x :: l) = foldl f (f x b) l
 
-  -- foldl commutes inside an application of f, if f has the right property
+  -- foldl commutes inside an application of f, if f has the right
+  -- property. lemma for main claim below.
   foldl-comm : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
                       (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
-                      foldl f (f x b) L == f x (foldl f b L)
+                      f x (foldl f b L) == foldl f (f x b) L
   foldl-comm f x b [] Δ = refl
-  foldl-comm f x b (y :: L) Δ with foldl-comm f y (f x b) L Δ -- NB: tricky shit #1
-  ... | ih = foldl f (f x b) (y :: L) =< refl >
-             foldl f (f y (f x b)) L  =< ih >
-             f y (foldl f (f x b) L)  =< ap (f y) (foldl-comm f x b L Δ) > -- #2
-             f y (f x (foldl f b L))  =< Δ y x (foldl f b L) >
-             f x (f y (foldl f b L))  =< ap (f x) (! (foldl-comm f y b L Δ)) > -- #3
-             f x (foldl f (f y b) L)  =< refl >
-             f x (foldl f b (y :: L)) ■
+  foldl-comm f x b (y :: L) Δ with foldl-comm f x b L Δ
+  ... | ih = f x (foldl f b (y :: L)) =< refl >
+             f x (foldl f (f y b) L)  =< ap (f x) (! (foldl-comm f y b L Δ)) >
+             f x (f y (foldl f b L))  =< Δ x y (foldl f b L) >
+             f y (f x (foldl f b L))  =< ap (f y) ih >
+             f y (foldl f (f x b) L)  =< foldl-comm f y (f x b) L Δ >
+             foldl f (f y (f x b)) L  =< refl >
+             foldl f (f x b) (y :: L) ■
 
-  -- so let's follow our noses here and see where it goes..
-  foldlrΔ' : {A B : Set} (f : A → B → B) (b : B) (L : List A)
-                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+  -- unreadable version, to show why =< ? > is worth the hassle
+  foldl-comm-ur : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
+                      (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                      f x (foldl f b L) == foldl f (f x b) L
+  foldl-comm-ur f x b [] Δ = refl
+  foldl-comm-ur f x b (y :: L) Δ = ap (f x) (! (foldl-comm f y b L Δ))
+                                 · (Δ x y (foldl f b L)
+                                    · (ap (f y) (foldl-comm f x b L Δ)
+                                         · foldl-comm f y (f x b) L Δ))
+
+
+  -- main claim
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c)) →
                 foldr f b L == foldl f b L
-  foldlrΔ' f b [] Δ = refl
-  foldlrΔ' f b (x :: L) Δ with foldlrΔ' f b L Δ
-  ... | ih = foldr f b (x :: L) =< refl >
-             f x (foldr f b L)  =< ap (f x) ih >
-             f x (foldl f b L)  =< ! (foldl-comm f x b L Δ) >
-             foldl f (f x b) L  =< refl >
-             foldl f b (x :: L) ■
+  foldlrΔ f b [] Δ = refl
+  foldlrΔ f b (x :: L) Δ with foldlrΔ f b L Δ
+  ... | ih = foldr f b (x :: L)       =< refl >
+             f x (foldr f b L)        =< ap (f x) ih >
+             f x (foldl f b L)        =< foldl-comm f x b L Δ >
+             foldl f (f x b) L        =< refl >
+             foldl f b (x :: L)       ■
+
+  -- this really is a generalization of the thing people usually say
+  assoc-comm-Δ : {A : Set}
+                 (_⊕_ : A → A → A)
+                 (assoc : (a b c : A) → ((a ⊕ b) ⊕ c) == (a ⊕ (b ⊕ c)))
+                 (comm : (a b : A) → (a ⊕ b) == (b ⊕ a)) →
+                 ((a b c : A) →  (a ⊕ (b ⊕ c)) == (b ⊕ (a ⊕ c)))
+  assoc-comm-Δ _⊕_ A C a b c = a ⊕ (b ⊕ c)    =< ! (A a b c) >
+                               (a ⊕ b) ⊕ c    =< ap (λ x → x ⊕ c) (C a b) >
+                               (b ⊕ a) ⊕ c    =< A b a c >
+                               b ⊕ (a ⊕ c)    ■

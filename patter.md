@@ -15,36 +15,38 @@ there's two things that i'm specifically _not_ going to do, so let's get
 that out of the way:
 
   - there's a lot of really interesting work happening right now using agda
-    to formalize some of the developments in HoTT, or to use HoTT and Agda
+    to formalize some of the developments in HoTT, or using HoTT and Agda
     together to produce new ways formalize other things. i'm not going to
     talk about that at all.
 
-    if the technical details mean something, i'm pretty much going to stay
-    entirely inside `Set`. there's nothing higher order happening here,
-    even though most of it probably works in that more general setting.
+    if the technical details mean something to you, i'm pretty much going
+    to stay entirely inside `Set`. there's nothing higher order happening
+    here, even though most of it probably works in that more general
+    setting.
 
     i think it's better to have a really good understanding of agda as a
     tool before trying to use it to work on HoTT as a domain. doing that
     requires that you use some of the more arcane features of the language,
-    which is really exciting but not a great place to start.
+    which is exciting but not a great place to start.
 
-    for more information about that, talk to me later or talk to the real
-    experts: favonia, evan cavallo, ed morehouse, carlo anguili, and dan
-    licata.
+    for more information about that, talk to me later or to the real
+    experts that are patient enough to help me when i'm stuck: favonia,
+    evan cavallo, ed morehouse, carlo angiuli, and dan licata.
 
   - i'm also not going to start at the very beginning. there will be
-    language features that i gloss over here that deserve a more full
-    treatement. my goal is not to prove to you (the highly novel fact) that
-    addition on `Nat` is commutative, or really go into a careful
+    language features that i gloss over here that deserve a much more
+    careful treatement. my goal is not to prove the highly novel fact that
+    addition on `Nat` is commutative to you, or really go into a careful
     discussion of Agda syntax, but to show you why it's beautiful to work
-    in Agda for some kinds of problems.
+    in Agda.
 
     there are a bunch of great tutorials that take that careful syntactic
     approach on the Agda wiki and around the internet.
 
     a really great resource to start with from here is dan licata's agda
     course from Wesleyan. he's offered access to anyone at cmu that wants
-    to see the materials if you shoot him an email.
+    to see the materials if you shoot him an email. if you have nothing
+    else to do for a week, i emphatically reccomend it.
 
 style of approach
 -----------------
@@ -54,20 +56,28 @@ dependently typed functional programming language and a proof assistant. so
 it's really natural to write the programs you know and love and then
 demonstrate things about them.
 
-generally speaking, this is called _extrinsic verification_, in that we
-stick to simple types for the programs themselves and then once they're
-complete demonstrate that what we're interested in are true.
+  - generally speaking, this is called _extrinsic verification_, in that we
+    stick to simple types for the programs themselves and then once they're
+    complete demonstrate that what we're interested in are true. i think of
+    this as doing the best version of the thing we all know.
 
-the other option is _intrinsic verification_, where we use elegant
-dependent types to make the programs themselves demonstrate the properties
-that we want of them.
+  - the other option is _intrinsic verification_, where we use elegant
+    dependent types to make the programs themselves demonstrate the
+    properties that we want of them.
 
 there's a real tension between these two approaches, and it's an
 interesting software engineering effort to find the right balance for a
-given program. today i'm going to focus pretty much only on extrinsic
-verification because it shows how to use the tool with a little less
-overhead; you can check out some beautiful examples of both styles in Dan's
-course work.
+given program.
+
+today i'm going to focus pretty much only on extrinsic verification because
+it shows how to use the tool with a little less overhead.
+
+you can check out some beautiful examples of both styles in Dan's course
+work. a good first example there is the difference between defining
+insertion sort on lists and showing that it produces sorted lists versus
+defining the type of _sorted lists_ and giving roughly the same insertion
+sort code richer types that preclude any implementation that doesn't have
+that property.
 
 
 actual tutorial
@@ -91,8 +101,8 @@ polymorphic. technically what we're doing is defining a family of types
 that's indexed by the type `A`.
 
 once you have a type, it's easy to define the familiar functions on that
-type by recursion and pattern matching. this is the standard structurally
-recursive append on lists, for example:
+type by recursion and pattern matching. for example, this is the standard
+structurally-recursive append:
 
 ```agda
   ++ : (A : Set) → List A → List A → List A
@@ -107,13 +117,13 @@ the features that i used to write that function live that doesn't show up
 statically in this file are goal, querying goal types, and automatically
 casing. we'll use all of them pretty much constantly.
 
-this is a perfectly adequate definition, but it's a bit tiresome for a
+this is a perfectly adequate definition, but it would get tiresome for a
 couple of reasons:
 
-  - we have to prefix pretty much everything
+  - we prefix pretty much everything, including cons
 
-  - we have to carry around the type variable A everywhere and we never do
-    anything with it
+  - we have to carry around the type A everywhere and we never do anything
+    with it
 
 we can fix the first complaint by using Agda's notion of _mixfix_
 identifiers: whenever `_` appears in any identifier, it stands for the next
@@ -376,8 +386,8 @@ induct on that.
              foldl f b (x :: L) ■
 ```
 
-(dynmaically, i used the _=<_> notation to work from both sides towards the
-middle)
+(here in real life, i used the _=<_> notation to work from both sides
+towards the middle, which is a great technique)
 
 the type of that unfilled hole is
 
@@ -385,114 +395,11 @@ the type of that unfilled hole is
   f x (foldl f b L) == foldl f (f x b) L
 ```
 
-which doesn't even look true. there isn't much else we could have done
-while still following our noses and the shape of the types invovled, so
-this is pretty much a dead end. we need to be clever; even working inside
-of a proof assistant can't stop you from having bad ideas, but it just
-means that you have a shot at noticing faster.
+which doesn't even look true--until you remember Δ. there isn't much else
+we could have done while still following our noses and the shape of the
+types invovled, so this is pretty much a dead end.
 
-here's the idea: look at the crummy picture and you'll see that there is a
-specific list that these things agree on. that is to say, `foldr` and
-`foldl` don't just apply `f` to the elements of their arguments in
-different orders, they do so in _exactly the opposite order_: in tail
-recursion we eagerly apply `f` as we get arguments that type check, so the
-first element gets consumed first; in structural recursion, we never
-evaluate `f` until we reach the end of the list, so the last element gets
-consumed first.
-
-so they meet in the middle: at the reverse of the input list.
-
-we can define reversing just like always:
-
-```agda
-  rev : {A : Set} → List A → List A
-  rev [] = []
-  rev (x :: l) = rev l ++ (x :: [])
-```
-
-and use that to state that intuition a little more carefully. this proof
-goes through with structural induction, but we need to invent a lemma.
-
-note that this is true for all `f`s; it doesn't matter if they have the Δ
-property because this is a purely structural operation.
-
-```agda
-  foldlrrev : {A B : Set}
-              (f : A → B → B)
-              (b : B)
-              (L : List A) →
-              foldr f b L == foldl f b (rev L)
-  foldlrrev f b [] = refl
-  foldlrrev f b (x :: L) with foldlrrev f b L
-  ... | ih = foldr f b (x :: L)                    =< refl >
-             f x (foldr f b L)                     =< ap (f x) ih >
-             f x (foldl f b (rev L))               =< refl >
-             foldl f (f x (foldl f b (rev L))) []  =< refl >
-	     -- got stuck here
-             foldl f (foldl f b (rev L)) (x :: []) =< ! (foldl++ f b (rev L) (x :: [])) >
-             foldl f b ((rev L) ++ (x :: []))      =< refl >
-             foldl f b (rev (x :: L)) ■
-```
-
-in the middle of that proof we found that we had nested `foldl`s and no
-real way to relate them. knowing when you're in over your head is a hugely
-important skill in working with Agda: do not fear making lemmas to fill
-specific gaps!
-
-this one in particular goes through quickly with just induction
-
-```agda
-  foldl++ : {A B : Set}
-            (f : A → B → B)
-            (b : B)
-            (L1 L2 : List A) →
-            foldl f b (L1 ++ L2) == foldl f (foldl f b L1) L2
-  foldl++ f b [] L2 = refl
-  foldl++ f b (x :: L1) L2 with foldl++ f (f x b) L1 L2
-  ... | ih = foldl f b ((x :: L1) ++ L2)      =< refl >
-             foldl f b (x :: (L1 ++ L2))      =< refl >
-             foldl f (f x b) (L1 ++ L2)       =< ih >
-             foldl f (foldl f (f x b) L1) L2  =< refl >
-             foldl f (foldl f b (x :: L1)) L2 ■
-```
-
-so let's think about how we'd meant to use this fact:
-
-```agda
-  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
-                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
-                foldr f b L == foldl f b L
-  foldlrΔ f b L Δ =
-        foldr f b L       =< foldlrrev f b L >
-        foldl f b (rev L) =< {! ?? !} >
-        foldl f b L       ■
-```
-
-this seems promising: all we need to do now is to fill the gap between two
-`foldl` expressions, because we've totally gotten rid of the `foldr` with
-that lemma.
-
-let's try to prove exactly what the type at that hole demands, then:
-
-```agda
-  foldlΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
-                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
-                foldl f b L == foldl f b (rev L)
-  foldlΔ f b [] Δ = refl
-  foldlΔ f b (x :: L) Δ with foldlΔ f b L Δ
-  ... | ih = foldl f b (x :: L)                    =< refl >
-      	     -- got stuck here and needed a final lemma
-             foldl f (f x b) L                     =< foldl-comm f x b L Δ >
-             f x (foldl f b L)                     =< ap (f x) ih >
-             f x (foldl f b (rev L))               =< refl >
-             foldl f (foldl f b (rev L)) (x :: []) =< ! (foldl++ f b (rev L) (x :: [])) >
-             foldl f b ((rev L) ++ (x :: [])) =< refl >
-             foldl f b (rev (x :: L)) ■
-```
-
-that last hole is worth another lemma: that you can push a foldl inside of
-another one and manipulate the base cases is not a small change. it's
-actually really similar
+let's make a lemma and try to jump that exact gap
 
 ```agda
   foldl-comm : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
@@ -508,3 +415,104 @@ actually really similar
              f x (foldl f (f y b) L)  =< refl >
              f x (foldl f b (y :: L)) ■
 ```
+
+this goes through!
+
+a confession
+------------
+
+it's a little hard to see why this is the right lemma, but i can motivate
+it with a confession: this proof was about a hundred lines longer until
+late last week.
+
+the intuition i have for why this works comes from thinking about that
+crummy picture. look at it and you'll see that there is a *specific* list
+that these things agree on.
+
+that is to say, `foldr` and `foldl` don't just apply `f` to the elements of
+their arguments in different orders, they do so in _exactly the opposite
+order_: in tail recursion we eagerly apply `f` as we get arguments that
+type check, so the first element gets consumed first; in structural
+recursion, we never evaluate `f` until we reach the end of the list, so the
+last element gets consumed first.
+
+so they meet in the middle: at the reverse of the input list.
+
+we can define reversing just like always:
+
+```agda
+  rev : {A : Set} → List A → List A
+  rev [] = []
+  rev (x :: l) = rev l ++ (x :: [])
+```
+
+and state that rough intuition a little more precisely as
+
+```agda
+  foldlrrev : {A B : Set}
+              (f : A → B → B)
+              (b : B)
+              (L : List A) →
+              foldr f b L == foldl f b (rev L)
+```
+
+and then restructuring the proof to
+
+```agda
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldr f b L == foldl f b L
+  foldlrΔ f b L Δ =
+        foldr f b L       =< foldlrrev f b L >
+        foldl f b (rev L) =< {! something here !} >
+        foldl f b L       ■
+```
+
+if you try to prove `foldlrrev` by induction, you'll find that you need to
+know how foldl distributes over an append, because of how `rev` is defined
+
+```agda
+  foldl++ : {A B : Set}
+            (f : A → B → B)
+            (b : B)
+            (L1 L2 : List A) →
+            foldl f b (L1 ++ L2) == foldl f (foldl f b L1) L2
+```
+
+then to fill that last gap in the main proof you need something at type
+
+```agda
+  foldlΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldl f b L == foldl f b (rev L)
+```
+
+the proof of this leads directly to the `foldl-comm` lemma --- which also
+applies perfectly well without the detour through `rev`. the reason is that
+in the proof of `foldl-comm`, you effectively _reimplement `rev`_ at the
+place where you apply Δ, but in a pretty opaque way.
+
+back at `A x A → A`
+-------------------
+
+as a final note, we can circle back around and note that the Δ property
+really is what you'd want. so let's say in some larger proof you wanted to
+make your life easier and swap in a `foldl` for a `foldr` summing a list of
+natural numbers. if you prove that addition is associative and commutative
+(spoiler: it is) then you could use
+
+```agda
+  -- this really is a generalization of the thing people usually say
+  assoc-comm-Δ : {A : Set}
+                 (_⊕_ : A → A → A)
+                 (assoc : (a b c : A) → ((a ⊕ b) ⊕ c) == (a ⊕ (b ⊕ c)))
+                 (comm : (a b : A) → (a ⊕ b) == (b ⊕ a)) →
+                 ((a b c : A) →  (a ⊕ (b ⊕ c)) == (b ⊕ (a ⊕ c)))
+  assoc-comm-Δ _⊕_ A C a b c = a ⊕ (b ⊕ c)    =< ! (A a b c) >
+                               (a ⊕ b) ⊕ c    =< ap (λ x → x ⊕ c) (C a b) >
+                               (b ⊕ a) ⊕ c    =< A b a c >
+                               b ⊕ (a ⊕ c)    ■
+```
+
+to cough up a Δ and then apply the proof above to get the equality you're
+interested in.
