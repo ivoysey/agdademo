@@ -376,6 +376,9 @@ induct on that.
              foldl f b (x :: L) ■
 ```
 
+(dynmaically, i used the _=<_> notation to work from both sides towards the
+middle)
+
 the type of that unfilled hole is
 
 ```agda
@@ -387,3 +390,41 @@ while still following our noses and the shape of the types invovled, so
 this is pretty much a dead end. we need to be clever; even working inside
 of a proof assistant can't stop you from having bad ideas, but it just
 means that you have a shot at noticing faster.
+
+here's the idea: look at the crummy picture and you'll see that there is a
+specific list that these things agree on. that is to say, `foldr` and
+`foldl` don't just apply `f` to the elements of their arguments in
+different orders, they do so in _exactly the opposite order_: in tail
+recursion we eagerly apply `f` as we get arguments that type check, so the
+first element gets consumed first; in structural recursion, we never
+evaluate `f` until we reach the end of the list, so the last element gets
+consumed first.
+
+so they meet in the middle: at the reverse of the input list.
+
+we can define reversing just like always:
+
+```agda
+  rev : {A : Set} → List A → List A
+  rev [] = []
+  rev (x :: l) = rev l ++ (x :: [])
+```
+
+and use that to state that intuition a little more carefully:
+
+```agda
+  foldlrrev : {A B : Set}
+              (f : A → B → B)
+              (b : B)
+              (L : List A) →
+              foldr f b L == foldl f b (rev L)
+  foldlrrev f b [] = refl
+  foldlrrev f b (x :: L) with foldlrrev f b L
+  ... | ih = foldr f b (x :: L)                    =< refl >
+             f x (foldr f b L)                     =< ap (f x) ih >
+             f x (foldl f b (rev L))               =< refl >
+             foldl f (f x (foldl f b (rev L))) []  =< refl >
+             foldl f (foldl f b (rev L)) (x :: []) =< ! (foldl++ f b (rev L) (x :: [])) >
+             foldl f b ((rev L) ++ (x :: []))      =< refl >
+             foldl f b (rev (x :: L)) ■
+```
