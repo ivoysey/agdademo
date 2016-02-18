@@ -410,7 +410,11 @@ we can define reversing just like always:
   rev (x :: l) = rev l ++ (x :: [])
 ```
 
-and use that to state that intuition a little more carefully:
+and use that to state that intuition a little more carefully. this proof
+goes through with structural induction, but we need to invent a lemma.
+
+note that this is true for all `f`s; it doesn't matter if they have the Δ
+property because this is a purely structural operation.
 
 ```agda
   foldlrrev : {A B : Set}
@@ -424,7 +428,83 @@ and use that to state that intuition a little more carefully:
              f x (foldr f b L)                     =< ap (f x) ih >
              f x (foldl f b (rev L))               =< refl >
              foldl f (f x (foldl f b (rev L))) []  =< refl >
+	     -- got stuck here
              foldl f (foldl f b (rev L)) (x :: []) =< ! (foldl++ f b (rev L) (x :: [])) >
              foldl f b ((rev L) ++ (x :: []))      =< refl >
              foldl f b (rev (x :: L)) ■
+```
+
+in the middle of that proof we found that we had nested `foldl`s and no
+real way to relate them. knowing when you're in over your head is a hugely
+important skill in working with Agda: do not fear making lemmas to fill
+specific gaps!
+
+this one in particular goes through quickly with just induction
+
+```agda
+  foldl++ : {A B : Set}
+            (f : A → B → B)
+            (b : B)
+            (L1 L2 : List A) →
+            foldl f b (L1 ++ L2) == foldl f (foldl f b L1) L2
+  foldl++ f b [] L2 = refl
+  foldl++ f b (x :: L1) L2 with foldl++ f (f x b) L1 L2
+  ... | ih = foldl f b ((x :: L1) ++ L2)      =< refl >
+             foldl f b (x :: (L1 ++ L2))      =< refl >
+             foldl f (f x b) (L1 ++ L2)       =< ih >
+             foldl f (foldl f (f x b) L1) L2  =< refl >
+             foldl f (foldl f b (x :: L1)) L2 ■
+```
+
+so let's think about how we'd meant to use this fact:
+
+```agda
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldr f b L == foldl f b L
+  foldlrΔ f b L Δ =
+        foldr f b L       =< foldlrrev f b L >
+        foldl f b (rev L) =< {! ?? !} >
+        foldl f b L       ■
+```
+
+this seems promising: all we need to do now is to fill the gap between two
+`foldl` expressions, because we've totally gotten rid of the `foldr` with
+that lemma.
+
+let's try to prove exactly what the type at that hole demands, then:
+
+```agda
+  foldlΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldl f b L == foldl f b (rev L)
+  foldlΔ f b [] Δ = refl
+  foldlΔ f b (x :: L) Δ with foldlΔ f b L Δ
+  ... | ih = foldl f b (x :: L)                    =< refl >
+      	     -- got stuck here and needed a final lemma
+             foldl f (f x b) L                     =< foldl-comm f x b L Δ >
+             f x (foldl f b L)                     =< ap (f x) ih >
+             f x (foldl f b (rev L))               =< refl >
+             foldl f (foldl f b (rev L)) (x :: []) =< ! (foldl++ f b (rev L) (x :: [])) >
+             foldl f b ((rev L) ++ (x :: [])) =< refl >
+             foldl f b (rev (x :: L)) ■
+```
+
+that last hole is worth another lemma: that you can push a foldl inside of
+another one and manipulate the base cases is not a small change. it's
+actually really similar
+
+```agda
+  foldl-comm : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
+                      (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                      foldl f (f x b) L == f x (foldl f b L)
+  foldl-comm f x b [] Δ = refl
+  foldl-comm f x b (y :: L) Δ with foldl-comm f y (f x b) L Δ -- NB: tricky shit #1
+  ... | ih = foldl f (f x b) (y :: L) =< refl >
+             foldl f (f y (f x b)) L  =< ih >
+             f y (foldl f (f x b) L)  =< ap (f y) (foldl-comm f x b L Δ) > -- #2
+             f y (f x (foldl f b L))  =< Δ y x (foldl f b L) >
+             f x (f y (foldl f b L))  =< ap (f x) (! (foldl-comm f y b L Δ)) > -- #3
+             f x (foldl f (f y b) L)  =< refl >
+             f x (foldl f b (y :: L)) ■
 ```
