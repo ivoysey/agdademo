@@ -330,17 +330,23 @@ working with the functions as given.
 
 we can do better!
 
-so let's think of a property for `f` that does make sense with respect to
-its real type. there's kind of only one thing that you can do that has a
-"move the arguments around!" kind of flavor to it and still type checks:
+the reason we usually talk about associativity and commutativity is that
+they give us some sense in which we can move arguments around in that big
+expression. the real intuition is that `foldr` and `foldl` do the same
+thing when strict order doesn't matter: structural and tail recursion both
+consume the whole list, just processing the elements in a different order.
+
+let's think of a property for `f` that _does_ make sense with respect to
+its real type amd has the "move the arguments around!" kind of flavor to it
+and still type checks. there's kind of only one choice:
 
 ```agda
   f a (f b c) == f b (f a c)
 ```
 
-it's easy to check that if `A` and `B` are the same and `f` is commutative
-and associative then it also has this property, so that's a sign that we're
-on the right track. (there's also nothing else that type checks)
+happily, it's easy to check that if `A` and `B` are the same and `f` is
+commutative and associative then it also has this property, so that's
+another sign that we're on the right track.
 
 restating our theorem, we get
 
@@ -351,7 +357,8 @@ restating our theorem, we get
 ```
 
 naming the proof term of this property Δ. (if you know a better name:
-please tell me.)
+please tell me. i just think Δ is a neat looking glyph and that we sound
+cooler when we use greek letters.)
 
 so let follow our noses and try to prove it! we have a list, surely we can
 induct on that.
@@ -377,4 +384,6 @@ the type of that unfilled hole is
 
 which doesn't even look true. there isn't much else we could have done
 while still following our noses and the shape of the types invovled, so
-this is pretty much a dead end. we need to be clever.
+this is pretty much a dead end. we need to be clever; even working inside
+of a proof assistant can't stop you from having bad ideas, but it just
+means that you have a shot at noticing faster.
