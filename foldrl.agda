@@ -147,6 +147,8 @@ module foldrl where
   foldl f b [] = b
   foldl f b (x :: l) = foldl f (f x b) l
 
+
+
   -- foldl distributes over append; this comes up inside the proof below,
   -- because we need to know something about how foldl operates on rev on a
   -- non-singleton list, so you get an append, and it's natural to then ask
@@ -230,16 +232,16 @@ module foldrl where
   foldlrrev' f b (x :: L) = ap (f x) (foldlrrev' f b L) · ! (foldl++ f b (rev L) (x :: []))
 
   -- so let's follow our noses here and see where it goes..
-  -- foldlrΔ' : {A B : Set} (f : A → B → B) (b : B) (L : List A)
-  --               (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
-  --               foldr f b L == foldl f b L
-  -- foldlrΔ' f b [] Δ = refl
-  -- foldlrΔ' f b (x :: L) Δ with foldlrΔ' f b L Δ
-  -- ... | ih = foldr f b (x :: L) =< refl >
-  --            f x (foldr f b L)  =< ap (f x) ih >
-  --            f x (foldl f b L)  =< {! !} >
-  --            foldl f (f x b) L  =< refl >
-  --            foldl f b (x :: L) ■
+  foldlrΔ' : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldr f b L == foldl f b L
+  foldlrΔ' f b [] Δ = refl
+  foldlrΔ' f b (x :: L) Δ with foldlrΔ' f b L Δ
+  ... | ih = foldr f b (x :: L) =< refl >
+             f x (foldr f b L)  =< ap (f x) ih >
+             f x (foldl f b L)  =< {! !} >
+             foldl f (f x b) L  =< refl >
+             foldl f b (x :: L) ■
   -- -- that's fairly unrecoverable, or at least i have no idea how to make
   -- the jump between the two statements. we don't know anything about the
   -- tail of the list on which we're inducting, L, and the definition of

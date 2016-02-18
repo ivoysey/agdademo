@@ -70,9 +70,6 @@ overhead; you can check out some beautiful examples of both styles in Dan's
 course work.
 
 
-structural editing
-------------------
-
 actual tutorial
 ===============
 
@@ -158,9 +155,6 @@ or type constructor names:
   [] ++ l2 = l2
   (x :: l1) ++ l2 = x :: (l1 ++ l2)
 ```
-
-proving things about functions and types you've defined
--------------------------------------------------------
 
 identity type
 -------------
@@ -285,3 +279,102 @@ reduce things beyond the point where you had a lemma that you wanted to
 apply. this can make the type that appears in the goal seem impossible to
 fulfill, because agda's busily doing its best impression of a freshman and
 just applying evaluation rules whenever it feels like it.
+
+
+foldr and foldl
+---------------
+
+alright, so that's about all we'll need to know about agda syntax for the
+rest of today. i want to shift gears and go through a little larger of a
+proof about some specific functional programs to give you a feel for what
+it's like to have an idea and then develop it and understand it by playing
+with the theorems in agda.
+
+recall the familiar functional programs
+
+```agda
+  foldr : {A B : Set} (f : A → B → B) (b : B) (l : List A) → B
+  foldr f b [] = b
+  foldr f b (x :: l) = f x (foldr f b l)
+
+
+  foldl : {A B : Set} (f : A → B → B) (b : B) (l : List A) → B
+  foldl f b [] = b
+  foldl f b (x :: l) = foldl f (f x b) l
+```
+
+which abstract the patterns of structural and tail recursion, respectively.
+
+RANT ABOUT ELIPSIS DOTS GOES HERE
+
+instead of the handwavey explanation that we get in the SML basis library
+and almost every functional programming text book, let's really dive into
+how these things relate to one another.
+
+specifically, the intuition is that if `f` has some property, they should
+produce the same answer. so that is to say that under some condition, we
+should be able to write a program at type
+
+```agda
+  foldlr : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                {! something about f !} →
+                foldr f b L == foldl f b L
+```
+
+the normal thing to say is that `f` is associative, commutative, and that
+`b` is a unit for it. this doesn't actually make a lot of sense, and is
+kind of a pet peeve of mine: all three things are really normally only
+defined on `A x A -> A`, so it's not really clear what that means. the weak
+answer is to restrict `f` to a lower type, but then we're not really
+working with the functions as given.
+
+we can do better!
+
+so let's think of a property for `f` that does make sense with respect to
+its real type. there's kind of only one thing that you can do that has a
+"move the arguments around!" kind of flavor to it and still type checks:
+
+```agda
+  f a (f b c) == f b (f a c)
+```
+
+it's easy to check that if `A` and `B` are the same and `f` is commutative
+and associative then it also has this property, so that's a sign that we're
+on the right track. (there's also nothing else that type checks)
+
+restating our theorem, we get
+
+```agda
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldr f b L == foldl f b L
+```
+
+naming the proof term of this property Δ. (if you know a better name:
+please tell me.)
+
+so let follow our noses and try to prove it! we have a list, surely we can
+induct on that.
+
+```agda
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
+                foldr f b L == foldl f b L
+  foldlrΔ f b [] Δ = refl
+  foldlrΔ f b (x :: L) Δ with foldlrΔ f b L Δ
+  ... | ih = foldr f b (x :: L) =< refl >
+             f x (foldr f b L)  =< ap (f x) ih >
+             f x (foldl f b L)  =< {! ruh roh !} >
+             foldl f (f x b) L  =< refl >
+             foldl f b (x :: L) ■
+```
+
+the type of that unfilled hole is
+
+```agda
+  f x (foldl f b L) == foldl f (f x b) L
+```
+
+which doesn't even look true. there isn't much else we could have done
+while still following our noses and the shape of the types invovled, so
+this is pretty much a dead end. we need to be clever.
