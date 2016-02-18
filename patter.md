@@ -113,6 +113,11 @@ structurally-recursive append:
 technically, again, we're defining a family of functions indexed by the
 type `A`: `(name : type2) → type2` is the Agda notation for Pi types.
 
+i should note that there's no reason for `++` to be curried
+especially. throughout this demo i'm going to avoid using pairs and Sigma
+types. the treatment of them is great, but it's a little bit of syntax that
+i'd prefer to avoid, so i'm just going to curry everything.
+
 the features that i used to write that function live that doesn't show up
 statically in this file are goal, querying goal types, and automatically
 casing. we'll use all of them pretty much constantly.
@@ -127,8 +132,8 @@ couple of reasons:
 
 we can fix the first complaint by using Agda's notion of _mixfix_
 identifiers: whenever `_` appears in any identifier, it stands for the next
-curried argument read in left to right order. so we can rewrite the type of
-lists as
+argument read off the type in left to right order. so we rewrite the type
+of lists to
 
 ```agda
   data List (A : Set) : Set where
@@ -136,11 +141,11 @@ lists as
     _::_ : A → List A → List A
 ```
 
-to indicate that we intend to use `::` in between its two arguments. this
-isn't just infixing; you can have as many `_` as you want and they can
-start the identifier to get you post-fix notation.
+which indicates that we intend to use `::` in between its two
+arguments. this isn't just infixing; you can have as many `_` as you want
+and they can start the identifier to get you post-fix notation.
 
-using this type, we can rewrite append in a more familiar shape
+using this type, we can then rewrite append in a more familiar shape
 
 ```agda
   ++ : (A : Set) → List A → List A → List A
@@ -157,7 +162,15 @@ argument `A` _implicit_:
   ++ (x :: l1) l2 = x :: (++ l1 l2)
 ```
 
-we can use the mixfix mechanism for any identifier, too, not just in types
+the `{ }` syntax is more or less like the `( )` for Pi types, except that
+you're allowed to leave it off at the call site and agda will guess it from
+the context. it's basically just doing fancy unification, so it can guess a
+lot of things. picking which order to put your arguments and what to make
+implicit or not is an art---never using it is irritating, using it too much
+is so clutterd as to be un-damn-readable, and there's a shifting sweet spot
+in between.
+
+we can use the mixfix mechanism for any identifier, not just in types
 or type constructor names:
 
 ```agda
@@ -170,14 +183,9 @@ identity type
 -------------
 
 before we can prove anything interesting, we need a notion of identity, so
-that we can even begin to state things like "x is y". there is a whole lot
-of interesting discussion about what this should be and why. let's not
-worry about it. this is a perfectly good definition for us.
-
-there's some technical junk going on here, about levels, that you don't
-need to worry about. i'm including it because it lets us associate our
-definition with agda's built in equals, with that `{-# BUILTIN ... #-}`
-junk, which is convenient.
+that we can even begin to make statements like "x is y". there is a whole
+lot of interesting discussion about what this should be and why. let's not
+worry about it too much  this is a perfectly good definition:
 
 ```agda
   open import Agda.Primitive using (Level; lzero; lsuc)
@@ -190,9 +198,18 @@ junk, which is convenient.
   {-# BUILTIN REFL refl #-}
 ```
 
-because the introduces identities as just another type family, we can
-compute on them pretty much like normal and show that they have the
+there's some technical junk going on here, about levels, that you don't
+need to worry about. i'm including it because it lets us associate our
+definition with agda's built in equals, with that `{-# BUILTIN ... #-}`
+junk, which lets us avoid having a lot of irritating lemmas.
+
+this introduces identity as just another type family--it's not in a
+different syntactic category to lists or somethingw weird. we can compute
+on identities pretty much like normal and show that they have the
 properties we'd expect.
+
+again there's a lot more going on here, and i'm just including a practical
+fragment.
 
 ```agda
   --- identity is transitive..
@@ -235,15 +252,17 @@ alright, let's prove something!
 this shows off the real power of agda's strutured editing. because the
 editor is aware of the types we've defined, we can generate all the cases
 of a proof and query the exact thing we need to show in each case and then
-just hammer through the cases.
+just hammer through the cases. we get slightly odd names for things
+sometimes, but nothing insurmountable. (you can often carbon date agda code
+by the syntax of the auto-generated names.)
 
-this is sometimes great, and sometimes it means that you do a lot more work
-than you really need to and end up producing something hard to read. in
-this case, note that we do fundimentally the same thing in the latter four
-cases: we note that you can swap equals for equals in the second argument
-of a `::` and then recurr on `a` with the other lists unchanged.
+sometimes this is great, and sometimes it means that you do a lot more work
+than needed to end up producing something hard to read. in this case, note
+that we do fundimentally the same thing in the latter four cases: we note
+that you can swap equals for equals in the second argument of a `::` and
+then recurr on `a` with the other lists unchanged.
 
-a tighter proof, then, only matches on `a` :
+a tighter proof, then, only cases on `a`
 
 ```agda
   ++assoc : {A : Set} → (a b c : List A) → ((a ++ b) ++ c) == (a ++ (b ++ c))
@@ -251,16 +270,27 @@ a tighter proof, then, only matches on `a` :
   ++assoc (a :: as) b c = ap (_::_ a) (++assoc as b c)
 ```
 
+which reveals that this really is a proof by structural induction on just
+one list---perhaps unsurprisingly because of how `++` is implemented.
+
 the problem here, at least for my money, is that this makes a ton of sense
 dynamically while we're writing it, but i have a really hard time looking
-back at it and remembering how the proof went.
+back at it five minutes later and remembering how the proof went.
 
-the solution to this complaint is a beautiful use of mix fix notation: we
-can define a notation for linking together a bunch of appeals to
-transitivity that lets us write the end points of each step explicitly in
-the program text, even when agda doesn't need them:
+this matters once you start building up more proofs that rely on one
+another. if you mention a previous proof in the type of a subsequent one,
+you're not saying "oh any old proof of type Tau"--you're saying *this
+specific proof*. so you may well need to argue about the exact bit of
+evidence your previous work coughs up, and therefore you need to understand
+it.
+
+the solution to this complaint is a beautiful (read: groan inducing) use of
+mix fix notation: we can define a notation for linking together a bunch of
+appeals to transitivity. that lets us write the end points of each step
+explicitly in the program text, even when agda doesn't need them:
 
 ```agda
+  -- mixfix doesn't define precedences
   infix  2 _■
   infixr 2 _=<_>_
 
@@ -284,15 +314,18 @@ we can then go back and write that proof in a much more explicative style:
 ```
 
 this also lets us get a handle on exactly when agda wants to reduce
-expressions. it's a little inconsistent with this, and sometimes will
-reduce things beyond the point where you had a lemma that you wanted to
-apply. this can make the type that appears in the goal seem impossible to
-fulfill, because agda's busily doing its best impression of a freshman and
+expressions. it's a little inconsistent with this, especially between
+versions of agda and under small changes to your program text.
+
+worse, sometimes the reductions go beyond the point where you had a lemma
+that you wanted to apply. this can make the type that appears in the goal
+seem impossible to fulfill, or like it's not something your lemma can
+handle, because agda's busily doing its best impression of a freshman and
 just applying evaluation rules whenever it feels like it.
 
 
-foldr and foldl
----------------
+`foldr` and `foldl`
+-------------------
 
 alright, so that's about all we'll need to know about agda syntax for the
 rest of today. i want to shift gears and go through a little larger of a
