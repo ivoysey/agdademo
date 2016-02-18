@@ -532,6 +532,8 @@ the connection between the two is that in the proof of `foldl-comm`, you
 effectively _reimplement `rev`_ at the place where you apply Δ, but in a
 pretty opaque way.
 
+this other proof is done out in full in the agda file, for the curious.
+
 at `A x A → A`
 --------------
 
@@ -555,4 +557,6 @@ natural numbers. if you prove that addition is associative and commutative
 ```
 
 to cough up a Δ and then apply the proof above to get the equality you're
-interested in.
+interested in. this example also shows off the `=< >` notation in a little
+more general of a setting; i would have gotten a much better grade in
+Algebraic Structures Theory in Agda than on paper.
