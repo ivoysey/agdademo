@@ -346,17 +346,42 @@ recall the familiar functional programs
   foldl f b (x :: l) = foldl f (f x b) l
 ```
 
-which abstract the patterns of structural and tail recursion, respectively.
+what can we say about how they relate to eachother?
 
-RANT ABOUT ELIPSIS DOTS GOES HERE
+the insane description of these we get from most sources, including this
+direct quote from the SML basis library documentation is
 
-instead of the handwavey explanation that we get in the SML basis library
-and almost every functional programming text book, let's really dive into
-how these things relate to one another.
+```
+foldl f init [x1, x2, ..., xn] returns
+     f(xn, ... , f(x2, f(x1, init))...)
+  or init if n = 0
 
-specifically, the intuition is that if `f` has some property, they should
-produce the same answer. so that is to say that under some condition, we
-should be able to write a program at type
+foldr f init [x1, x2, ..., xn] returns
+     f(x1, f(x2, ..., f (xn, init)...))
+  or init if n = 0
+```
+
+so the common relation you'll hear is that they're just reassociations of
+one another, that `f` is associative, commutative, and that `b` is a unit
+for it then they do the same thing.
+
+this doesn't actually make a lot of sense, and is kind of a pet peeve of
+mine: all three properties are normally only defined on `A x A -> A`.  the
+weak answer is to restrict `f` to a lower type and use these canonical
+properties, but then we're not really working with the functions as given.
+
+here's a different way to think about it:
+
+`foldr` is the HOF that abstracts the pattern of structural recursion on
+lists; `foldl` is the HOF that abstracts the pattern tail recursion. the
+relationship between them is that they apply their functional argument in
+the opposite order---`foldl` eagerly applying as soon as there's anything
+in scope that's the right type, `foldr` doing the structural thing
+following the type directly. if that order doesn't matter, they do the same
+thing.
+
+that is to say that under some condition, we should be able to write a
+program at type
 
 ```agda
   foldlr : {A B : Set} (f : A → B → B) (b : B) (L : List A)
@@ -364,24 +389,11 @@ should be able to write a program at type
                 foldr f b L == foldl f b L
 ```
 
-the normal thing to say is that `f` is associative, commutative, and that
-`b` is a unit for it. this doesn't actually make a lot of sense, and is
-kind of a pet peeve of mine: all three things are really normally only
-defined on `A x A -> A`, so it's not really clear what that means. the weak
-answer is to restrict `f` to a lower type, but then we're not really
-working with the functions as given.
-
-we can do better!
-
 the reason we usually talk about associativity and commutativity is that
 they give us some sense in which we can move arguments around in that big
-expression. the real intuition is that `foldr` and `foldl` do the same
-thing when strict order doesn't matter: structural and tail recursion both
-consume the whole list, just processing the elements in a different order.
-
-let's think of a property for `f` that _does_ make sense with respect to
-its real type amd has the "move the arguments around!" kind of flavor to it
-and still type checks. there's kind of only one choice:
+expression. so let's think of a property for `f` that _does_ make sense
+with respect to its real type but still has the "move the arguments
+around!" flavor to it and type checks. there's kind of only one choice:
 
 ```agda
   f a (f b c) == f b (f a c)
@@ -399,12 +411,10 @@ restating our theorem, we get
                 foldr f b L == foldl f b L
 ```
 
-naming the proof term of this property Δ. (if you know a better name:
-please tell me. i just think Δ is a neat looking glyph and that we sound
-cooler when we use greek letters.)
+naming the proof term of this property Δ. (if you know a better name,
+please tell me. i just think Δ looks exciting.)
 
-so let follow our noses and try to prove it! we have a list, surely we can
-induct on that.
+so let follow our noses and try to prove it!
 
 ```agda
   foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
@@ -419,7 +429,7 @@ induct on that.
              foldl f b (x :: L) ■
 ```
 
-(here in real life, i used the _=<_> notation to work from both sides
+(here in the demo, i used the _=<_> notation to work from both sides
 towards the middle, which is a great technique)
 
 the type of that unfilled hole is
@@ -449,14 +459,14 @@ let's make a lemma and try to jump that exact gap
              f x (foldl f b (y :: L)) ■
 ```
 
-this goes through!
+this goes through, so that finishes the proof!
 
 a confession
 ------------
 
-it's a little hard to see why this is the right lemma, but i can motivate
-it with a confession: this proof was about a hundred lines longer until
-late last week.
+it's a little hard for me to see why this is the right lemma other than it
+comes up and i can prove it. but i can motivate it with a confession: this
+proof was about a hundred lines longer until late last week.
 
 the intuition i have for why this works comes from thinking about that
 crummy picture. look at it and you'll see that there is a *specific* list
@@ -464,12 +474,7 @@ that these things agree on.
 
 that is to say, `foldr` and `foldl` don't just apply `f` to the elements of
 their arguments in different orders, they do so in _exactly the opposite
-order_: in tail recursion we eagerly apply `f` as we get arguments that
-type check, so the first element gets consumed first; in structural
-recursion, we never evaluate `f` until we reach the end of the list, so the
-last element gets consumed first.
-
-so they meet in the middle: at the reverse of the input list.
+order_ so they meet in the middle: at the reverse of the input list.
 
 we can define reversing just like always:
 
@@ -479,7 +484,7 @@ we can define reversing just like always:
   rev (x :: l) = rev l ++ (x :: [])
 ```
 
-and state that rough intuition a little more precisely as
+then state that rough intuition a little more precisely as
 
 ```agda
   foldlrrev : {A B : Set}
@@ -489,7 +494,7 @@ and state that rough intuition a little more precisely as
               foldr f b L == foldl f b (rev L)
 ```
 
-and then restructuring the proof to
+and then restructure the proof to
 
 ```agda
   foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
@@ -520,13 +525,15 @@ then to fill that last gap in the main proof you need something at type
                 foldl f b L == foldl f b (rev L)
 ```
 
-the proof of this leads directly to the `foldl-comm` lemma --- which also
-applies perfectly well without the detour through `rev`. the reason is that
-in the proof of `foldl-comm`, you effectively _reimplement `rev`_ at the
-place where you apply Δ, but in a pretty opaque way.
+the proof of this leads naturally to the `foldl-comm` lemma --- which also
+applies perfectly well without the detour through `rev`.
 
-back at `A x A → A`
--------------------
+the connection between the two is that in the proof of `foldl-comm`, you
+effectively _reimplement `rev`_ at the place where you apply Δ, but in a
+pretty opaque way.
+
+at `A x A → A`
+--------------
 
 as a final note, we can circle back around and note that the Δ property
 really is what you'd want. so let's say in some larger proof you wanted to
@@ -535,7 +542,7 @@ natural numbers. if you prove that addition is associative and commutative
 (spoiler: it is) then you could use
 
 ```agda
-  -- this really is a generalization of the thing people usually say
+  -- Δ really is a generalization of the thing people usually say
   assoc-comm-Δ : {A : Set}
                  (_⊕_ : A → A → A)
                  (assoc : (a b c : A) → ((a ⊕ b) ⊕ c) == (a ⊕ (b ⊕ c)))
