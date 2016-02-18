@@ -1,7 +1,4 @@
 module foldrl where
-  -- ignore this
-  open import Agda.Primitive using (Level; lzero; lsuc)
-
   -- the familiar inductive definition of a list. only difference is that
   -- we need to explicitly list variables over which the definition is
   -- polymorphic
@@ -58,6 +55,8 @@ module foldrl where
   -- interesting question! here's one answer
 
   -- ignore this mostly
+  open import Agda.Primitive using (Level; lzero; lsuc)
+
   data _==_ {l : Level} {A : Set l} (M : A) : A → Set l where
      refl : M == M
   infixr 9 _==_
@@ -132,6 +131,9 @@ module foldrl where
               (a :: (as ++ b)) ++ c  =< ap (λ x → a :: x) ih >
                a :: (as ++ (b ++ c)) =< refl >
               (a :: as) ++ (b ++ c)  ■
+
+
+
 
   -- this is the higher order function that encapsulates structural
   -- recursion on lists

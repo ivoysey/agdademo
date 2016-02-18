@@ -78,6 +78,9 @@ actual tutorial
 
 alright, let's get cracking!
 
+defining simple types and functions
+-----------------------------------
+
 here's the familiar type of lists:
 ```agda
   data List (A : Set) : Set where
@@ -146,3 +149,139 @@ argument `A` _implicit_:
   ++ [] l2 = l2
   ++ (x :: l1) l2 = x :: (++ l1 l2)
 ```
+
+we can use the mixfix mechanism for any identifier, too, not just in types
+or type constructor names:
+
+```agda
+  _++_ : {A : Set} → List A → List A → List A
+  [] ++ l2 = l2
+  (x :: l1) ++ l2 = x :: (l1 ++ l2)
+```
+
+proving things about functions and types you've defined
+-------------------------------------------------------
+
+identity type
+-------------
+
+before we can prove anything interesting, we need a notion of identity, so
+that we can even begin to state things like "x is y". there is a whole lot
+of interesting discussion about what this should be and why. let's not
+worry about it. this is a perfectly good definition for us.
+
+there's some technical junk going on here, about levels, that you don't
+need to worry about. i'm including it because it lets us associate our
+definition with agda's built in equals, with that `{-# BUILTIN ... #-}`
+junk, which is convenient.
+
+```agda
+  open import Agda.Primitive using (Level; lzero; lsuc)
+
+  data _==_ {l : Level} {A : Set l} (M : A) : A → Set l where
+     refl : M == M
+  infixr 9 _==_
+
+  {-# BUILTIN EQUALITY _==_ #-}
+  {-# BUILTIN REFL refl #-}
+```
+
+because the introduces identities as just another type family, we can
+compute on them pretty much like normal and show that they have the
+properties we'd expect.
+
+```agda
+  --- identity is transitive..
+  _·_ : {α : Set} {x y z : α} → x == y → y == z → x == z
+  refl · refl = refl
+
+  --- .. and symmetric
+  ! : {α : Set} {x y : α} → x == y → y == x
+  ! refl = refl
+```
+
+the one slightly non-traditional property of identities that we'll get a
+lot of milage out of is usually called `ap`. it states that everything else
+we can hope to define respects this notion of identity. think of this as a
+tool for swapping out an expression for one to which it's identified.
+
+```agda
+  ap : {α β : Set} {x y : α} (F : α → β)
+          → x == y → F x == F y
+  ap F refl = refl
+```
+
+first theorem: `++` is associative
+----------------------------------
+
+alright, let's prove something!
+
+```agda
+  ++assoc : {A : Set} → (a b c : List A) → ((a ++ b) ++ c) == (a ++ (b ++ c))
+  ++assoc [] [] [] = refl
+  ++assoc [] [] (x :: c) = refl
+  ++assoc [] (x :: b) [] = refl
+  ++assoc [] (x :: b) (x₁ :: c) = refl
+  ++assoc (x :: a) [] [] = ap (_::_ x) (++assoc a [] [])
+  ++assoc (x :: a) [] (x₁ :: c) = ap (_::_ x) (++assoc a [] (x₁ :: c))
+  ++assoc (x :: a) (x₁ :: b) [] = ap (_::_ x) (++assoc a (x₁ :: b) [])
+  ++assoc (x :: a) (x₁ :: b) (x₂ :: c) = ap (_::_ x) (++assoc a (x₁ :: b) (x₂ :: c))
+```
+
+this shows off the real power of agda's strutured editing. because the
+editor is aware of the types we've defined, we can generate all the cases
+of a proof and query the exact thing we need to show in each case and then
+just hammer through the cases.
+
+this is sometimes great, and sometimes it means that you do a lot more work
+than you really need to and end up producing something hard to read. in
+this case, note that we do fundimentally the same thing in the latter four
+cases: we note that you can swap equals for equals in the second argument
+of a `::` and then recurr on `a` with the other lists unchanged.
+
+a tighter proof, then, only matches on `a` :
+
+```agda
+  ++assoc : {A : Set} → (a b c : List A) → ((a ++ b) ++ c) == (a ++ (b ++ c))
+  ++assoc [] b c = refl
+  ++assoc (a :: as) b c = ap (_::_ a) (++assoc as b c)
+```
+
+the problem here, at least for my money, is that this makes a ton of sense
+dynamically while we're writing it, but i have a really hard time looking
+back at it and remembering how the proof went.
+
+the solution to this complaint is a beautiful use of mix fix notation: we
+can define a notation for linking together a bunch of appeals to
+transitivity that lets us write the end points of each step explicitly in
+the program text, even when agda doesn't need them:
+
+```agda
+  infix  2 _■
+  infixr 2 _=<_>_
+
+  _=<_>_ : {A : Set} (x : A) {y z : A} → x == y → y == z → x == z
+  _ =< p1 > p2 = p1 · p2
+
+  _■ : {A : Set} (x : A) → x == x
+  _■ _ = refl
+```
+
+we can then go back and write that proof in a much more explicative style:
+
+```agda
+  ++assoc : {A : Set} → (a b c : List A) → ((a ++ b) ++ c) == (a ++ (b ++ c))
+  ++assoc [] b c = refl
+  ++assoc (a :: as) b c with ++assoc as b c
+  ... | ih = ((a :: as) ++ b) ++ c   =< refl >
+              (a :: (as ++ b)) ++ c  =< ap (λ x → a :: x) ih >
+               a :: (as ++ (b ++ c)) =< refl >
+              (a :: as) ++ (b ++ c)  ■
+```
+
+this also lets us get a handle on exactly when agda wants to reduce
+expressions. it's a little inconsistent with this, and sometimes will
+reduce things beyond the point where you had a lemma that you wanted to
+apply. this can make the type that appears in the goal seem impossible to
+fulfill, because agda's busily doing its best impression of a freshman and
+just applying evaluation rules whenever it feels like it.
