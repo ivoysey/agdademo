@@ -85,9 +85,9 @@ module foldrl-simpler where
           → x == y → F x == F y
   ap F refl = refl
 
-  -- there's a lot more interesting stuff to talk about here, but this is
-  -- all we need to prove some theorems in Set today, so that's all i want
-  -- to talk about.
+  -- there's a lot more interesting stuff to talk about with
+  -- identifications, but this is all we need to prove some theorems in Set
+  -- today, so that's all i want to talk about.
 
   -- the most intersting theorem we can prove with what we have so far is
   -- that ++ is aassociative:
@@ -112,13 +112,15 @@ module foldrl-simpler where
   -- the holes. it's not really that readable. there's a very elegant use
   -- of mixfix that lets us address this, however, by naming the end points
   -- of a bunch of points in a chain of transitivities.
-
   infix  2 _■
   infixr 2 _=<_>_
 
+  -- notation for proofs by transivity that allows us to explicitly name
+  -- the end points
   _=<_>_ : {A : Set} (x : A) {y z : A} → x == y → y == z → x == z
   _ =< p1 > p2 = p1 · p2
 
+  -- postfix refl syntax; pairs well with above.
   _■ : {A : Set} (x : A) → x == x
   _■ _ = refl
 
@@ -134,7 +136,8 @@ module foldrl-simpler where
 
   -- that ih thing is just a habit of mine; if i'm recurring on something
   -- structurally i use it to remind myself of what the right thing to
-  -- assume is. totally not part of the language.
+  -- assume is. totally not part of the language. the `with` construct is a
+  -- lot more powerful than just letting me make short names for things.
 
   -- this is the higher order function that encapsulates structural
   -- recursion on lists
@@ -163,7 +166,7 @@ module foldrl-simpler where
              foldl f (f y (f x b)) L  =< refl >
              foldl f (f x b) (y :: L) ■
 
-  -- unreadable version, to show why =< ? > is worth the hassle
+  -- mildly unreadable version, to show why =< ? > is worth the hassle
   foldl-comm-ur : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
                       (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
                       f x (foldl f b L) == foldl f (f x b) L
@@ -172,7 +175,6 @@ module foldrl-simpler where
                                  · (Δ x y (foldl f b L)
                                     · (ap (f y) (foldl-comm f x b L Δ)
                                          · foldl-comm f y (f x b) L Δ))
-
 
   -- main claim
   foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
@@ -186,7 +188,8 @@ module foldrl-simpler where
              foldl f (f x b) L        =< refl >
              foldl f b (x :: L)       ■
 
-  -- this really is a generalization of the thing people usually say
+  -- this shows that the Δ property really is a fair generalization /
+  -- reckoning of the bizarre thing people usually say
   assoc-comm-Δ : {A : Set}
                  (_⊕_ : A → A → A)
                  (assoc : (a b c : A) → ((a ⊕ b) ⊕ c) == (a ⊕ (b ⊕ c)))

@@ -1,17 +1,17 @@
-intro
+ntro
 =====
 
-hi!
+hi! for the couple of people in here that don't know me, i'm ian
+voysey. thank you all for coming!
 
-for the couple of people in here that don't know me, i'm ian voysey. today
-i'm going to give you a taste of what it's like to use agda to prove some
-theorems about functional programs.
+today i'm going to give you a taste of what it's like to use agda to prove
+some theorems about functional programs.
 
 you can find the source for everything i'm doing (and embarrassingly most
 of the words that i'm saying right now) on github at
 http://github.com/ivoysey/agdademo
 
-there's two things that i'm specifically _not_ going to do, so let's get
+there a few things that i'm specifically _not_ going to do, so let's get
 that out of the way:
 
   - there's a lot of really interesting work happening right now using agda
@@ -20,9 +20,9 @@ that out of the way:
     talk about that at all.
 
     if the technical details mean something to you, i'm pretty much going
-    to stay entirely inside `Set`. there's nothing higher order happening
-    here, even though most of it probably works in that more general
-    setting.
+    to stay entirely inside `Set`. there's nothing higher dimensional
+    happening here, even though most of it probably works in that more
+    general setting.
 
     i think it's better to have a really good understanding of agda as a
     tool before trying to use it to work on HoTT as a domain. doing that
@@ -40,7 +40,7 @@ that out of the way:
     discussion of Agda syntax, but to show you why it's beautiful to work
     in Agda.
 
-    there are a bunch of great tutorials that take that careful syntactic
+    there are a bunch of tutorials that take that careful syntactic
     approach on the Agda wiki and around the internet.
 
     a really great resource to start with from here is dan licata's agda
@@ -48,13 +48,23 @@ that out of the way:
     to see the materials if you shoot him an email. if you have nothing
     else to do for a week, i emphatically reccomend it.
 
+    you can also check out the videos and assignments from the OPLSS13
+    course that dan and i gave. there's some overlap with his work at
+    Wesleyan; that came after OPLSS so the presentations of the things in
+    the intersection are generally better there.
+
+    this also means i'm not going to talk about the std lib (there's
+    several competing versions) and will end up reimplementing a little bit
+    of it as a result. to minimize that, i'm going to avoid using some
+    natural language features like pairs.
+
 style of approach
 -----------------
 
-the really great thing about agda is that it's both a full throated
+the compelling thing about agda is that it's both a full-throated
 dependently typed functional programming language and a proof assistant. so
-it's really natural to write the programs you know and love and then
-demonstrate things about them.
+it's natural to write the programs you know and love and then demonstrate
+things about them.
 
   - generally speaking, this is called _extrinsic verification_, in that we
     stick to simple types for the programs themselves and then once they're
@@ -66,18 +76,20 @@ demonstrate things about them.
     properties that we want of them.
 
 there's a real tension between these two approaches, and it's an
-interesting software engineering effort to find the right balance for a
-given program.
+interesting software engineering effort to find the right place on the
+spectrum for a given program.
 
-today i'm going to focus pretty much only on extrinsic verification because
-it shows how to use the tool with a little less overhead.
+for example, consider implementing insertion sort. MORE PATTER GOES HERE;
+DO THIS AFTER THE TALK. you can check out some beautiful examples of both
+styles in Dan's course work. a good first example there is the difference
+between defining insertion sort on lists and showing that it produces
+sorted lists versus defining the type of _sorted lists_ and giving roughly
+the same insertion sort code richer types that preclude any implementation
+that doesn't have that property.
 
-you can check out some beautiful examples of both styles in Dan's course
-work. a good first example there is the difference between defining
-insertion sort on lists and showing that it produces sorted lists versus
-defining the type of _sorted lists_ and giving roughly the same insertion
-sort code richer types that preclude any implementation that doesn't have
-that property.
+today i'm going to focus pretty much only on extrinsic verification only
+because it shows how to use the tool with a little less overhead. but don't
+get the wrong idea that this is the only way to skin this cat.
 
 
 actual tutorial
@@ -95,10 +107,10 @@ here's the familiar type of lists:
     :: : A → List A → List A
 ```
 
-note that, unlike SML, agda is pretty explicit about polymorphism. you have
-to give a name to the type variable over which a definition is
-polymorphic. technically what we're doing is defining a family of types
-that's indexed by the type `A`.
+note that, unlike SML or other functional langauges, agda is quite
+explicit about polymorphism. you have to give a name to the type variable
+over which a definition is polymorphic. technically what we're doing is
+defining a family of types that's indexed by the type `A`.
 
 once you have a type, it's easy to define the familiar functions on that
 type by recursion and pattern matching. for example, this is the standard
@@ -113,17 +125,17 @@ structurally-recursive append:
 technically, again, we're defining a family of functions indexed by the
 type `A`: `(name : type2) → type2` is the Agda notation for Pi types.
 
-i should note that there's no reason for `++` to be curried
+i should note that there's no reason for `++` or `::` to be curried
 especially. throughout this demo i'm going to avoid using pairs and Sigma
-types. the treatment of them is great, but it's a little bit of syntax that
+types. the treatment of them is solid, but it's a little bit of syntax that
 i'd prefer to avoid, so i'm just going to curry everything.
 
 the features that i used to write that function live that doesn't show up
 statically in this file are goal, querying goal types, and automatically
 casing. we'll use all of them pretty much constantly.
 
-this is a perfectly adequate definition, but it would get tiresome for a
-couple of reasons:
+this is a perfectly adequate definition, but it would get tiresome in a
+practical context for a couple of reasons:
 
   - we prefix pretty much everything, including cons
 
@@ -143,7 +155,8 @@ of lists to
 
 which indicates that we intend to use `::` in between its two
 arguments. this isn't just infixing; you can have as many `_` as you want
-and they can start the identifier to get you post-fix notation.
+and they can start the identifier to get you post-fix notation. (we'll see
+more of this as we go.)
 
 using this type, we can then rewrite append in a more familiar shape
 
@@ -163,12 +176,15 @@ argument `A` _implicit_:
 ```
 
 the `{ }` syntax is more or less like the `( )` for Pi types, except that
-you're allowed to leave it off at the call site and agda will guess it from
-the context. it's basically just doing fancy unification, so it can guess a
-lot of things. picking which order to put your arguments and what to make
-implicit or not is an art---never using it is irritating, using it too much
-is so clutterd as to be un-damn-readable, and there's a shifting sweet spot
-in between.
+you're allowed to leave it off at the call site and agda will guess what
+you meant from the context. when i say "guess", i mean that it's basically
+just doing a form of unification, so it dos pretty well.
+
+picking which order to put your arguments and what to make implicit or not
+is an art---never using it is irritating, using it too much is so cluttered
+as to be un-damn-readable, and there's a shifting sweet spot in
+between. it's a bit like choosing which arugments to curry and in what
+order.
 
 we can use the mixfix mechanism for any identifier, not just in types
 or type constructor names:
@@ -198,6 +214,10 @@ worry about it too much  this is a perfectly good definition:
   {-# BUILTIN REFL refl #-}
 ```
 
+(the `infixr` keyword is just syntactic sugar to let us leave off
+parenthesis later. a mix-fix identifier that _happens_ to be infix can be
+assigned binding precendence and directionality.)
+
 there's some technical junk going on here, about levels, that you don't
 need to worry about. i'm including it because it lets us associate our
 definition with agda's built in equals, with that `{-# BUILTIN ... #-}`
@@ -224,7 +244,8 @@ fragment.
 the one slightly non-traditional property of identities that we'll get a
 lot of milage out of is usually called `ap`. it states that everything else
 we can hope to define respects this notion of identity. think of this as a
-tool for swapping out an expression for one to which it's identified.
+tool for swapping out an expression for one to which it's
+identified---exchanging like for like:
 
 ```agda
   ap : {α β : Set} {x y : α} (F : α → β)
@@ -313,6 +334,11 @@ we can then go back and write that proof in a much more explicative style:
               (a :: as) ++ (b ++ c)  ■
 ```
 
+contrast this sort of proof to something that you might see in Coq ---
+there's a lot more writing in the sense that i'm sure that there's some
+tactic that would do this for us, but it's much easier to use this proof
+term as a way to explain things between people.
+
 this also lets us get a handle on exactly when agda wants to reduce
 expressions. it's a little inconsistent with this, especially between
 versions of agda and under small changes to your program text.
@@ -348,8 +374,8 @@ recall the familiar functional programs
 
 what can we say about how they relate to eachother?
 
-the insane description of these we get from most sources, including this
-direct quote from the SML basis library documentation is
+the moderately insane description of these we get from most sources,
+including this direct quote from the SML basis library documentation is
 
 ```
 foldl f init [x1, x2, ..., xn] returns
@@ -377,8 +403,8 @@ lists; `foldl` is the HOF that abstracts the pattern tail recursion. the
 relationship between them is that they apply their functional argument in
 the opposite order---`foldl` eagerly applying as soon as there's anything
 in scope that's the right type, `foldr` doing the structural thing
-following the type directly. if that order doesn't matter, they do the same
-thing.
+following the type directly. if that order doesn't matter for `f`, they do
+the same thing.
 
 that is to say that under some condition, we should be able to write a
 program at type
@@ -401,7 +427,8 @@ around!" flavor to it and type checks. there's kind of only one choice:
 
 happily, it's easy to check that if `A` and `B` are the same and `f` is
 commutative and associative then it also has this property, so that's
-another sign that we're on the right track.
+another sign that we're on the right track. (we'll see a proof of this
+later on, as an example of doing something less inductive in Agda.)
 
 restating our theorem, we get
 
@@ -412,7 +439,7 @@ restating our theorem, we get
 ```
 
 naming the proof term of this property Δ. (if you know a better name,
-please tell me. i just think Δ looks exciting.)
+please tell me. i just think Δ looks kind of exciting.)
 
 so let follow our noses and try to prove it!
 
@@ -438,28 +465,41 @@ the type of that unfilled hole is
   f x (foldl f b L) == foldl f (f x b) L
 ```
 
-which doesn't even look true--until you remember Δ. there isn't much else
-we could have done while still following our noses and the shape of the
-types invovled, so this is pretty much a dead end.
+which doesn't even look especially true--until you remember Δ. there isn't
+much else we could have done while still following our noses and the shape
+of the types invovled, so this is pretty much a dead end.
 
 let's make a lemma and try to jump that exact gap
 
 ```agda
   foldl-comm : {A B : Set} (f : A → B → B) (x : A) (b : B) (L : List A)
                       (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c) ) →
-                      foldl f (f x b) L == f x (foldl f b L)
+                      f x (foldl f b L) == foldl f (f x b) L
   foldl-comm f x b [] Δ = refl
-  foldl-comm f x b (y :: L) Δ with foldl-comm f y (f x b) L Δ -- NB: tricky shit #1
-  ... | ih = foldl f (f x b) (y :: L) =< refl >
-             foldl f (f y (f x b)) L  =< ih >
-             f y (foldl f (f x b) L)  =< ap (f y) (foldl-comm f x b L Δ) > -- #2
-             f y (f x (foldl f b L))  =< Δ y x (foldl f b L) >
-             f x (f y (foldl f b L))  =< ap (f x) (! (foldl-comm f y b L Δ)) > -- #3
-             f x (foldl f (f y b) L)  =< refl >
-             f x (foldl f b (y :: L)) ■
+  foldl-comm f x b (y :: L) Δ with foldl-comm f x b L Δ
+  ... | ih = f x (foldl f b (y :: L)) =< refl >
+             f x (foldl f (f y b) L)  =< ap (f x) (! (foldl-comm f y b L Δ)) >
+             f x (f y (foldl f b L))  =< Δ x y (foldl f b L) >
+             f y (f x (foldl f b L))  =< ap (f y) ih >
+             f y (foldl f (f x b) L)  =< foldl-comm f y (f x b) L Δ >
+             foldl f (f y (f x b)) L  =< refl >
+             foldl f (f x b) (y :: L) ■
 ```
 
 this goes through, so that finishes the proof!
+
+```agda
+  foldlrΔ : {A B : Set} (f : A → B → B) (b : B) (L : List A)
+                (Δ : (a b : A) (c : B) → f a (f b c) == f b (f a c)) →
+                foldr f b L == foldl f b L
+  foldlrΔ f b [] Δ = refl
+  foldlrΔ f b (x :: L) Δ with foldlrΔ f b L Δ
+  ... | ih = foldr f b (x :: L)       =< refl >
+             f x (foldr f b L)        =< ap (f x) ih >
+             f x (foldl f b L)        =< foldl-comm f x b L Δ >
+             foldl f (f x b) L        =< refl >
+             foldl f b (x :: L)       ■
+```
 
 a confession
 ------------
