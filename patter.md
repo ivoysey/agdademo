@@ -1,4 +1,4 @@
-ntro
+intro
 =====
 
 hi! for the couple of people in here that don't know me, i'm ian
@@ -79,7 +79,7 @@ there's a real tension between these two approaches, and it's an
 interesting software engineering effort to find the right place on the
 spectrum for a given program.
 
-example
+
 *******
 
 a good first example to think about is the difference between defining
@@ -115,9 +115,10 @@ do intrinsically, so doing it extrinsically will be a lot of repeated work.
 there is no silver bullet to this sort of question; it's part of the art
 and engineering of formalization.
 
+*******
 
-you can check out some beautiful examples of both styles in Dan's course
-work.
+you can check out some larger and nicer examples of both styles in Dan's
+course work.
 
 today i'm going to focus pretty much only on extrinsic verification only
 because it shows how to use the tool with a little less overhead. but don't
