@@ -79,13 +79,45 @@ there's a real tension between these two approaches, and it's an
 interesting software engineering effort to find the right place on the
 spectrum for a given program.
 
-for example, consider implementing insertion sort. MORE PATTER GOES HERE;
-DO THIS AFTER THE TALK. you can check out some beautiful examples of both
-styles in Dan's course work. a good first example there is the difference
-between defining insertion sort on lists and showing that it produces
-sorted lists versus defining the type of _sorted lists_ and giving roughly
-the same insertion sort code richer types that preclude any implementation
-that doesn't have that property.
+example
+*******
+
+a good first example to think about is the difference between defining
+insertion sort on lists and showing that it produces sorted lists versus
+defining the type of _sorted lists_ and giving roughly the same insertion
+sort code richer types to show that it maps into that richer type.
+
+if all you want to do is show sortedness, you'd quickly notice that the
+proofs in the extrinsic style approach are more or less the same as the
+code itself. this is strong evidence that an intinsic approach might be
+helpful, and if you then tried it you'd find that the code more or less
+doesn't change and you can just enrich it with this stronger type that
+holds sortedness to be self-evident.
+
+the problem is that just knowing that the output of an algorithm is sorted
+isn't enough to argue that it's a sorting algorithm---you also need to know
+that the output is a permutation of the input. to update your intrinsic
+implementation you have to rewrite most of the types to add this new
+property, and that may or may not be a lot of clutter.
+
+it turns out that it'll actually be quite hard to make an insertion sort
+that intrinsicially demonstrates the permutation property: it's easy for
+sortedness becasue the inductive definition of sortedness is inherently
+structurally recursive; the inductive definition of permutations is not, so
+it's a bad match for the pattern of recursion that the algorithm follows,
+and therefore will induce a lot of lemmas.
+
+on the extrinsic side, you don't have to touch the code of the algorithm,
+but you may well need to reimplement a lot of things. if you consider also
+showing that your implementation is or isn't stable, that might be easy to
+do intrinsically, so doing it extrinsically will be a lot of repeated work.
+
+there is no silver bullet to this sort of question; it's part of the art
+and engineering of formalization.
+
+
+you can check out some beautiful examples of both styles in Dan's course
+work.
 
 today i'm going to focus pretty much only on extrinsic verification only
 because it shows how to use the tool with a little less overhead. but don't
@@ -504,13 +536,14 @@ this goes through, so that finishes the proof!
 a confession
 ------------
 
-it's a little hard for me to see why this is the right lemma other than it
-comes up and i can prove it. but i can motivate it with a confession: this
-proof was about a hundred lines longer until late last week.
+it's a little hard for me to say why this is the right lemma other than it
+comes up and we happen to be able to prove it. but i can motivate it with a
+confession: this proof was about a hundred lines longer until late last
+week.
 
-the intuition i have for why this works comes from thinking about that
-crummy picture. look at it and you'll see that there is a *specific* list
-that these things agree on.
+the intuition i have for why this theorem is true at all comes from
+thinking about that crummy picture. look at it and you'll see that there is
+a *specific* list that these things agree on.
 
 that is to say, `foldr` and `foldl` don't just apply `f` to the elements of
 their arguments in different orders, they do so in _exactly the opposite
