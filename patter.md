@@ -247,9 +247,9 @@ worry about it too much  this is a perfectly good definition:
   {-# BUILTIN REFL refl #-}
 ```
 
-(the `infixr` keyword is just syntactic sugar to let us leave off
-parenthesis later. a mix-fix identifier that _happens_ to be infix can be
-assigned binding precendence and directionality.)
+(the `infixr` keyword is just a convenience to let us leave off parenthesis
+later. a mix-fix identifier that _happens_ to be infix can be assigned
+binding precendence and directionality.)
 
 there's some technical junk going on here, about levels, that you don't
 need to worry about. i'm including it because it lets us associate our
@@ -273,6 +273,10 @@ fragment.
   ! : {α : Set} {x y : α} → x == y → y == x
   ! refl = refl
 ```
+
+(note the heavy use of implicit arguments here; having to name all the end
+points in these things gets tired _fast_. try making them explicit in the
+file and then making the proofs go through; you'll see why.)
 
 the one slightly non-traditional property of identities that we'll get a
 lot of milage out of is usually called `ap`. it states that everything else
@@ -339,7 +343,7 @@ evidence your previous work coughs up, and therefore you need to understand
 it.
 
 the solution to this complaint is a beautiful (read: groan inducing) use of
-mix fix notation: we can define a notation for linking together a bunch of
+mixfix notation: we can define a notation for linking together a bunch of
 appeals to transitivity. that lets us write the end points of each step
 explicitly in the program text, even when agda doesn't need them:
 
@@ -366,6 +370,14 @@ we can then go back and write that proof in a much more explicative style:
                a :: (as ++ (b ++ c)) =< refl >
               (a :: as) ++ (b ++ c)  ■
 ```
+
+the `with` keyword lets you do pattern matching on new expressions -- a bit
+like case in SML. here i'm using it for a very personal idiom: when i'm
+taking a sort of propositional attitude to the act of writing a program,
+and i have some idea of what i intend to induct on, it really helps me to
+have a thing in the context with the type of the inductive hypothesis that
+i think i'm going to use. so i give myself one with a trivial pattern that
+just names it.
 
 contrast this sort of proof to something that you might see in Coq ---
 there's a lot more writing in the sense that i'm sure that there's some
@@ -452,7 +464,11 @@ the reason we usually talk about associativity and commutativity is that
 they give us some sense in which we can move arguments around in that big
 expression. so let's think of a property for `f` that _does_ make sense
 with respect to its real type but still has the "move the arguments
-around!" flavor to it and type checks. there's kind of only one choice:
+around!" flavor to it and type checks. to get that flavor, you need at
+least two applications of `f` and therefore at least two things in `A` and
+one thing in `B`.
+
+there's kind of only one choice:
 
 ```agda
   f a (f b c) == f b (f a c)
@@ -518,6 +534,15 @@ let's make a lemma and try to jump that exact gap
              foldl f (f y (f x b)) L  =< refl >
              foldl f (f x b) (y :: L) ■
 ```
+
+the trick here, if there is one, is that the full inductive hypothesis we
+get from `foldl-comm` is actually quite strong. as long as we always make
+the call on something that the termination checker can figure is smaller,
+we're allowed to change the other arguments as much as we like. that means,
+here, that we use three recursive calls to move around different arguments,
+since they're always in expressions that use `foldl` on `L`. so this proof
+isn't *strictly* structural, because we don't use just the obvious
+structral IH.
 
 this goes through, so that finishes the proof!
 
