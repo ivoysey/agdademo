@@ -16,7 +16,7 @@
 
 * **patter.md**
 
-  the script / notes that i worked up for myself in getting read for
+  the script / notes that i worked up for myself in getting ready for
   RG.
 
 * **readme.md**
