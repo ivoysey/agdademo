@@ -113,8 +113,8 @@ module foldrl where
   -- of mixfix that lets us address this, however, by naming the end points
   -- of a bunch of points in a chain of transitivities.
 
-  infix  2 _■
-  infixr 2 _=<_>_
+  infix  12 _■
+  infixr 10 _=<_>_
 
   _=<_>_ : {A : Set} (x : A) {y z : A} → x == y → y == z → x == z
   _ =< p1 > p2 = p1 · p2
